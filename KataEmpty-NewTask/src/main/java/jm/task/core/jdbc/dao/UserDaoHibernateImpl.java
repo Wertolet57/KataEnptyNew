@@ -14,7 +14,8 @@ import java.util.List;
 
 public class UserDaoHibernateImpl implements UserDao {
 
-    SessionFactory sessionFactory = Util.getSessionFactory();
+    private SessionFactory sessionFactory = Util.getSessionFactory();
+    private Transaction transaction = null;
 
     public UserDaoHibernateImpl() {
     }
@@ -48,52 +49,49 @@ public class UserDaoHibernateImpl implements UserDao {
     @Override
     public void saveUser(String name, String lastName, byte age) {
         try (Session session = sessionFactory.openSession()) {
-            try {
-                Transaction transaction = session.beginTransaction();
-                session.save(new User(name, lastName, age));
-                transaction.commit();
-            } catch (Exception e) {
-                session.beginTransaction().rollback();
-            }
+            transaction = session.beginTransaction();
+            session.save(new User(name, lastName, age));
+            transaction.commit();
+        } catch (Exception e) {
+            transaction.rollback();
         }
     }
 
     @Override
     public void removeUserById(long id) {
         try (Session session = sessionFactory.openSession()) {
-            try {
-                Transaction transaction = session.beginTransaction();
-                Query query = session.createQuery("delete User where id = :ID");
-                query.setParameter("ID", id);
-                query.executeUpdate();
-                transaction.commit();
-            } catch (Exception e) {
-                session.beginTransaction().rollback();
-            }
+            transaction = session.beginTransaction();
+            Query query = session.createQuery("delete User where id = :ID");
+            query.setParameter("ID", id);
+            query.executeUpdate();
+            transaction.commit();
+        } catch (Exception e) {
+            transaction.rollback();
         }
     }
 
     @Override
     public List<User> getAllUsers() {
+        List<User> result = null;
         try (Session session = sessionFactory.openSession()) {
-            CriteriaBuilder builder = session.getCriteriaBuilder();
-            CriteriaQuery<User> criteria = builder.createQuery(User.class);
-            criteria.from(User.class);
-            return session.createQuery(criteria).getResultList();
+            transaction = session.beginTransaction();
+            result = session.createQuery("from User").list();
+            transaction.commit();
+        } catch (Exception e) {
+            transaction.rollback();
         }
+        return result;
     }
 
     @Override
     public void cleanUsersTable() {
         try (Session session = sessionFactory.openSession()) {
-            try {
-                Transaction transaction = session.beginTransaction();
-                Query query = session.createQuery("delete User");
-                query.executeUpdate();
-                transaction.commit();
-            } catch (Exception e) {
-                session.beginTransaction().rollback();
-            }
+            transaction = session.beginTransaction();
+            Query query = session.createQuery("delete User");
+            query.executeUpdate();
+            transaction.commit();
+        } catch (Exception e) {
+            transaction.rollback();
         }
     }
 }
